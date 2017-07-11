@@ -1,57 +1,71 @@
 #include "DS18B20.h"
 
-
 DS18B20::DS18B20(uint16_t pin, bool singleDrop)
-: _singleDrop(singleDrop) {
+  : _singleDrop(singleDrop) {
   ds = new OneWire(pin);
 }
 
 boolean DS18B20::search() {
-  boolean isSuccess =  ds->search(addr);
+  boolean isSuccess = ds->search(_addr);
 
-  if(isSuccess){
-    chiptype = addr[0];
+  return isSuccess;
+}
 
-    switch (addr[0]) {
-      case 0x10:  sprintf(szName, "DS18S20"); type_s = 1; break;
-      case 0x28:  sprintf(szName, "DS18B20"); type_s = 0; break;
-      case 0x22:  sprintf(szName, "DS1822" ); type_s = 0; break;
-      default  :  sprintf(szName, "Unknown"); type_s = 0; break;
-    }
-  }
+boolean DS18B20::search(uint8_t addr[8]) {
+
+  boolean isSuccess = ds->search(_addr);
+  if (isSuccess) memcpy(addr, _addr, 8);
+  else           memset(addr, 0, 8);
   return isSuccess;
 }
 
 DS18B20::~DS18B20() {
   delete(ds);
 }
+
+void DS18B20::setAddress(uint8_t addr[8]) {
+  memcpy(_addr, addr, 8);
+}
+
 void DS18B20::resetsearch() {
   ds->reset_search();
 }
 
 void DS18B20::setResolution(uint8_t newResolution) {
+  setResolution(_addr, newResolution);
+}
+
+void DS18B20::setResolution(uint8_t addr[0], uint8_t newResolution) {
+  if (!addr[0]) return;
+
   ds->reset();
   ds->select(addr);
-  switch (newResolution){
-  case 12:
-    ds->write(TEMP_12_BIT);
-    break;
-  case 11:
-    ds->write(TEMP_11_BIT);
-    break;
-  case 10:
-    ds->write(TEMP_10_BIT);
-    break;
-  case 9:
-  default:
-    ds->write(TEMP_9_BIT);
-    break;
+  switch (newResolution) {
+    case 12:
+      ds->write(TEMP_12_BIT);
+      break;
+    case 11:
+      ds->write(TEMP_11_BIT);
+      break;
+    case 10:
+      ds->write(TEMP_10_BIT);
+      break;
+    case 9:
+    default:
+      ds->write(TEMP_9_BIT);
+      break;
   }
   HAL_Delay_Milliseconds(20);
   ds->reset();
 }
 
 bool DS18B20::readPowerSupply() {
+  return readPowerSupply(_addr);
+}
+
+bool DS18B20::readPowerSupply(uint8_t addr[8]) {
+  if (!addr[0]) return false;
+
   bool ret = false;
   ds->reset();
   ds->select(addr);
@@ -62,18 +76,42 @@ bool DS18B20::readPowerSupply() {
 }
 
 void DS18B20::getROM(char szROM[]) {
-  sprintf(szROM, "%X %X %X %X %X %X %X %X", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+  sprintf(szROM, "%02X %02X %02X %02X %02X %02X %02X %02X", _addr[0], _addr[1], _addr[2], _addr[3], _addr[4], _addr[5], _addr[6], _addr[7]);
 }
 
 byte DS18B20::getChipType() {
-  return chiptype;
+  return getChipType(_addr);
+}
+
+byte DS18B20::getChipType(uint8_t addr[8]) {
+  return addr[0];
 }
 
 char* DS18B20::getChipName() {
+  return getChipName(_addr);
+}
+
+char* DS18B20::getChipName(uint8_t addr[8]) {
+  char szName[MAX_NAME];
+
+  switch (addr[0]) {
+    case 0x10:  sprintf(szName, "DS18S20"); break;
+    case 0x28:  sprintf(szName, "DS18B20"); break;
+    case 0x22:  sprintf(szName, "DS1822"); break;
+    default:  sprintf(szName, "Unknown"); break;
+  }
+
   return szName;
 }
 
 float DS18B20::getTemperature(bool forceSelect) {
+  return getTemperature(forceSelect ? _addr : NULL);
+}
+
+float DS18B20::getTemperature(uint8_t addr[8]) {
+  bool forceSelect = (addr != NULL);
+  if (!addr[0]) return NAN;
+
   ds->reset();
   if (_singleDrop && !forceSelect)
     ds->skip();
@@ -81,7 +119,7 @@ float DS18B20::getTemperature(bool forceSelect) {
     ds->select(addr);
   ds->write(0x44);        // start conversion, with parasite power on at the end
   delay(750);     // maybe 750ms is enough, maybe not
-  // we might do a ds.depower() here, but the reset will take care of it.
+                  // we might do a ds.depower() here, but the reset will take care of it.
   ds->reset();
   if (_singleDrop && !forceSelect)
     ds->skip();
@@ -90,35 +128,36 @@ float DS18B20::getTemperature(bool forceSelect) {
   ds->write(0xBE);         // Read Scratchpad
 
   for (int i = 0; i < 9; i++) {           // we need 9 bytes
-    data[i] = ds->read();
+    _data[i] = ds->read();
     //Serial.println("DS Read Data:");
     //Serial.println(data[i], HEX);
     //Serial.println(" ");
   }
-  _dataCRC = (OneWire::crc8(data, 8));
+  _dataCRC = (OneWire::crc8(_data, 8));
   //Serial.println(_dataCRC, HEX);
-  _readCRC = (data[8]);
+  _readCRC = (_data[8]);
   //Serial.println(_readCRC, HEX);
 
   // Convert the data to actual temperature
   // because the result is a 16 bit signed integer, it should
   // be stored to an "int16_t" type, which is always 16 bits
   // even when compiled on a 32 bit processor.
-  int16_t raw = (data[1] << 8) | data[0];
+  int16_t raw = (_data[1] << 8) | _data[0];
 
-  if (type_s) {
+  if (addr[0] == 0x10) {
     raw = raw << 3; // 9 bit resolution default
-    if (data[7] == 0x10) {
+    if (_data[7] == 0x10) {
       // "count remain" gives full 12 bit resolution
-      raw = (raw & 0xFFF0) + 12 - data[6];
+      raw = (raw & 0xFFF0) + 12 - _data[6];
     }
-  } else {
-    byte cfg = (data[4] & 0x60);
+  }
+  else {
+    byte cfg = (_data[4] & 0x60);
     // at lower res, the low bits are undefined, so let's zero them
     if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
     else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
     else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-    //// default is 12 bit resolution, 750 ms conversion time
+                                          //// default is 12 bit resolution, 750 ms conversion time
   }
   return (float)raw / 16.0;
 }
