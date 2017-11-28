@@ -50,13 +50,11 @@ double getTemp(uint8_t addr[8]) {
   } while (!ds18b20.crcCheck() && MAXRETRY > i++);
 
   if (i < MAXRETRY) {
-    //celsius = _temp;
-    //fahrenheit = ds18b20.convertToFahrenheit(_temp);
+    //_temp = ds18b20.convertToFahrenheit(_temp);
     Serial.println(_temp);
   }
   else {
     _temp = NAN;
-    //celsius = fahrenheit = NAN;
     Serial.println("Invalid reading");
   }
 

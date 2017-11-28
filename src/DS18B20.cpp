@@ -1,17 +1,20 @@
 #include "DS18B20.h"
 
 DS18B20::DS18B20(uint16_t pin, bool singleDrop)
-  : _singleDrop(singleDrop) {
+  : _singleDrop(singleDrop)
+{
   ds = new OneWire(pin);
 }
 
-boolean DS18B20::search() {
+boolean DS18B20::search()
+{
   boolean isSuccess = ds->search(_addr);
 
   return isSuccess;
 }
 
-boolean DS18B20::search(uint8_t addr[8]) {
+boolean DS18B20::search(uint8_t addr[8])
+{
 
   boolean isSuccess = ds->search(_addr);
   if (isSuccess) memcpy(addr, _addr, 8);
@@ -19,28 +22,40 @@ boolean DS18B20::search(uint8_t addr[8]) {
   return isSuccess;
 }
 
-DS18B20::~DS18B20() {
+DS18B20::~DS18B20()
+{
   delete(ds);
 }
 
-void DS18B20::setAddress(uint8_t addr[8]) {
+void DS18B20::setAddress(uint8_t addr[8])
+{
   memcpy(_addr, addr, 8);
 }
 
-void DS18B20::resetsearch() {
+void DS18B20::resetsearch()
+{
   ds->reset_search();
 }
 
-void DS18B20::setResolution(uint8_t newResolution) {
+void DS18B20::setResolution(uint8_t newResolution)
+{
+  if (_singleDrop && !_addr[0])
+  {
+    resetsearch();
+    search();
+  }
   setResolution(_addr, newResolution);
 }
 
-void DS18B20::setResolution(uint8_t addr[0], uint8_t newResolution) {
+void DS18B20::setResolution(uint8_t addr[0], uint8_t newResolution)
+{
   if (!addr[0]) return;
 
   ds->reset();
   ds->select(addr);
-  switch (newResolution) {
+
+  switch (newResolution)
+  {
     case 12:
       ds->write(TEMP_12_BIT);
       break;
@@ -59,42 +74,72 @@ void DS18B20::setResolution(uint8_t addr[0], uint8_t newResolution) {
   ds->reset();
 }
 
-bool DS18B20::readPowerSupply() {
+bool DS18B20::readPowerSupply()
+{
+  if (_singleDrop && !_addr[0])
+  {
+    resetsearch();
+    search();
+  }
   return readPowerSupply(_addr);
 }
 
-bool DS18B20::readPowerSupply(uint8_t addr[8]) {
+bool DS18B20::readPowerSupply(uint8_t addr[8])
+{
   if (!addr[0]) return false;
 
-  bool ret = false;
   ds->reset();
   ds->select(addr);
+
+  bool ret = false;
   ds->write(READPOWERSUPPLY);
   if (ds->read_bit() == 0) ret = true;
   ds->reset();
   return ret;
 }
 
-void DS18B20::getROM(char szROM[]) {
+void DS18B20::getROM(char szROM[])
+{
+  if (_singleDrop && !_addr[0])
+  {
+    resetsearch();
+    search();
+  }
+
   sprintf(szROM, "%02X %02X %02X %02X %02X %02X %02X %02X", _addr[0], _addr[1], _addr[2], _addr[3], _addr[4], _addr[5], _addr[6], _addr[7]);
 }
 
-byte DS18B20::getChipType() {
+byte DS18B20::getChipType()
+{
+  if (_singleDrop && !_addr[0])
+  {
+    resetsearch();
+    search();
+  }
   return getChipType(_addr);
 }
 
-byte DS18B20::getChipType(uint8_t addr[8]) {
+byte DS18B20::getChipType(uint8_t addr[8])
+{
   return addr[0];
 }
 
-char* DS18B20::getChipName() {
+char* DS18B20::getChipName()
+{
+  if (_singleDrop && !_addr[0])
+  {
+    resetsearch();
+    search();
+  }
   return getChipName(_addr);
 }
 
-char* DS18B20::getChipName(uint8_t addr[8]) {
+char* DS18B20::getChipName(uint8_t addr[8])
+{
   char szName[MAX_NAME];
 
-  switch (addr[0]) {
+  switch (addr[0])
+  {
     case 0x10:  sprintf(szName, "DS18S20"); break;
     case 0x28:  sprintf(szName, "DS18B20"); break;
     case 0x22:  sprintf(szName, "DS1822"); break;
@@ -104,13 +149,20 @@ char* DS18B20::getChipName(uint8_t addr[8]) {
   return szName;
 }
 
-float DS18B20::getTemperature(bool forceSelect) {
+float DS18B20::getTemperature(bool forceSelect)
+{
+  if (_singleDrop && !_addr[0])
+  {
+    resetsearch();
+    search();
+  }
   return getTemperature(forceSelect ? _addr : NULL);
 }
 
-float DS18B20::getTemperature(uint8_t addr[8]) {
+float DS18B20::getTemperature(uint8_t addr[8])
+{
   bool forceSelect = (addr != NULL);
-  if (!addr[0]) return NAN;
+  if (!_singleDrop && !addr[0]) return NAN;
 
   ds->reset();
   if (_singleDrop && !forceSelect)
@@ -127,7 +179,8 @@ float DS18B20::getTemperature(uint8_t addr[8]) {
     ds->select(addr);
   ds->write(0xBE);         // Read Scratchpad
 
-  for (int i = 0; i < 9; i++) {           // we need 9 bytes
+  for (int i = 0; i < 9; i++)
+  {           // we need 9 bytes
     _data[i] = ds->read();
     //Serial.println("DS Read Data:");
     //Serial.println(data[i], HEX);
@@ -144,14 +197,17 @@ float DS18B20::getTemperature(uint8_t addr[8]) {
   // even when compiled on a 32 bit processor.
   int16_t raw = (_data[1] << 8) | _data[0];
 
-  if (addr[0] == 0x10) {
+  if (addr[0] == 0x10)
+  {
     raw = raw << 3; // 9 bit resolution default
-    if (_data[7] == 0x10) {
-      // "count remain" gives full 12 bit resolution
+    if (_data[7] == 0x10)
+    {
+// "count remain" gives full 12 bit resolution
       raw = (raw & 0xFFF0) + 12 - _data[6];
     }
   }
-  else {
+  else
+  {
     byte cfg = (_data[4] & 0x60);
     // at lower res, the low bits are undefined, so let's zero them
     if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
@@ -162,12 +218,15 @@ float DS18B20::getTemperature(uint8_t addr[8]) {
   return (float)raw / 16.0;
 }
 
-float DS18B20::convertToFahrenheit(float celsius) {
+float DS18B20::convertToFahrenheit(float celsius)
+{
   return celsius * 1.8 + 32.0;
 }
 
-bool DS18B20::crcCheck() {
-  if (_dataCRC != _readCRC) {
+bool DS18B20::crcCheck()
+{
+  if (_dataCRC != _readCRC)
+  {
     Serial.println("CRC Failed");
     return false;
   }

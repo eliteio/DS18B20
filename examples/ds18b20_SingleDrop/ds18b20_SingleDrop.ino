@@ -14,8 +14,6 @@ uint32_t msLastMetric;
 uint32_t msLastSample;
 
 void setup() {
-  Time.zone(-5);
-  Particle.variable("tempHotWater", fahrenheit);
   Serial.begin(115200);
 }
 
@@ -31,9 +29,6 @@ void loop() {
 }
 
 void publishData(){
-  if(!ds18b20.crcCheck()){      //make sure the value is correct
-    return;
-  }
   sprintf(szInfo, "%2.2f", fahrenheit);
   Particle.publish("dsTmp", szInfo, PRIVATE);
   msLastMetric = millis();
