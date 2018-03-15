@@ -136,17 +136,15 @@ char* DS18B20::getChipName()
 
 char* DS18B20::getChipName(uint8_t addr[8])
 {
-  char szName[MAX_NAME];
-
   switch (addr[0])
   {
-    case 0x10:  sprintf(szName, "DS18S20"); break;
-    case 0x28:  sprintf(szName, "DS18B20"); break;
-    case 0x22:  sprintf(szName, "DS1822"); break;
-    default:  sprintf(szName, "Unknown"); break;
+    case 0x10: return "DS18S20"; break;
+    case 0x28: return "DS18B20"; break;
+    case 0x22: return "DS1822" ; break;
+    default:   return "Unknown"; break;
   }
 
-  return szName;
+  return "";
 }
 
 float DS18B20::getTemperature(bool forceSelect)
