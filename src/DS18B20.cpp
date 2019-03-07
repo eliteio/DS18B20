@@ -3,6 +3,11 @@
 DS18B20::DS18B20(uint16_t pin, bool singleDrop)
   : _singleDrop(singleDrop)
 {
+  memset(_data   , 0, sizeof(_data));
+  memset(_addr   , 0, sizeof(_addr));
+  _dataCRC = 
+  _readCRC = 0;
+
   ds = new OneWire(pin);
 }
 
