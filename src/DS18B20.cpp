@@ -199,7 +199,7 @@ float DS18B20::getTemperature(uint8_t addr[8], bool forceSelect)
   // be stored to an "int16_t" type, which is always 16 bits
   // even when compiled on a 32 bit processor.
 
-  uint16_t raw;
+  int16_t raw;
   switch(addr[0]) 
   { // sensor type 
     case WIRE_DS1820:
@@ -218,11 +218,11 @@ float DS18B20::getTemperature(uint8_t addr[8], bool forceSelect)
         case 0x40: _data[0] &= ~0b001; break;           // 11 bit 375.00 ms
         default: break;                                 // 12 bit 750.00 ms 
       }
-      celsius = (float)((_data[1] << 8) | _data[0]) / 16.0;
+      celsius = (int16_t)((_data[1] << 8) | _data[0]) / 16.0;
       break;
       
     case WIRE_DS2438:
-      celsius = (float)_data[2] + ((_data[1] >> 3) / 32.0) * (_data[2] & 0x80 ? -1.0 : 1.0);           
+      celsius = (int16_t)_data[2] + ((float)(_data[1] >> 3) / 32.0) * (_data[2] & 0x80 ? -1.0 : 1.0);           
       break;
       
     default:
