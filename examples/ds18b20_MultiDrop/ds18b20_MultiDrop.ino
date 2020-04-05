@@ -1,20 +1,29 @@
 #include <DS18B20.h>
 
 const int MAXRETRY = 3;
-const int pinOneWire = D2;
-const int pinLED = D7;
 const uint32_t msSampleTime = 2500;
 const uint32_t msPublishTime = 30000;
+const int16_t pinLED = D7;
+
+const int16_t dsVCC  = D2;
+const int16_t dsData = D3;
+const int16_t dsGND  = D4;
+
+DS18B20 ds18b20(dsData);
+
 const int nSENSORS = 2;
-
-DS18B20 ds18b20(pinOneWire);
-
-retained uint8_t sensorAddresses[nSENSORS][8];
-
 float celsius[nSENSORS] = {NAN, NAN};
+retained uint8_t sensorAddresses[nSENSORS][8];
 
 void setup() {
   pinMode(pinLED, OUTPUT);
+
+  pinMode(dsGND, OUTPUT);
+  digitalWrite(dsGND, LOW);
+  pinMode(dsVCC, OUTPUT);
+  digitalWrite(dsVCC, HIGH);
+
+  delay(1000);
 
   ds18b20.resetsearch();                 // initialise for sensor search
   for (int i = 0; i < nSENSORS; i++) {   // try to read the sensor addresses

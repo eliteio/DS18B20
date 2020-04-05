@@ -3,10 +3,15 @@
 
 const int      MAXRETRY          = 4;
 const uint32_t msSAMPLE_INTERVAL = 2500;
-const uint32_t msMETRIC_PUBLISH  = 30000;
+const uint32_t msMETRIC_PUBLISH  = 10000;
 
-DS18B20  ds18b20(D2, true); //Sets Pin D2 for Water Temp Sensor and 
-                            // this is the only sensor on bus
+const int16_t dsVCC  = D2;
+const int16_t dsData = D3;
+const int16_t dsGND  = D4;
+
+// Sets Pin D3 as data pin and the only sensor on bus
+DS18B20  ds18b20(dsData, true); 
+
 char     szInfo[64];
 double   celsius;
 double   fahrenheit;
@@ -15,6 +20,13 @@ uint32_t msLastSample;
 
 void setup() {
   Serial.begin(115200);
+  
+  pinMode(dsGND, OUTPUT);
+  digitalWrite(dsGND, LOW);
+  pinMode(dsVCC, OUTPUT);
+  digitalWrite(dsVCC, HIGH);
+
+  delay(1000);
 }
 
 void loop() {
