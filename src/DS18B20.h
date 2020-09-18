@@ -37,7 +37,8 @@ private:
   byte         _dataCRC;
   byte         _readCRC;
   bool         _singleDrop;
-
+  uint32_t     _sampleDelay;
+  
 public:
   DS18B20(uint16_t pi, bool singleDrop = false);
   ~DS18B20();

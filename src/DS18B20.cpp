@@ -4,10 +4,11 @@ DS18B20::DS18B20(uint16_t pin, bool singleDrop)
 {
   memset(_data, 0, sizeof(_data));
   memset(_addr, 0, sizeof(_addr));
-  _dataCRC    = 0; 
-  _readCRC    = 0;
-  _singleDrop = singleDrop;
-  ds          = new OneWire(pin);
+  _dataCRC     = 0; 
+  _readCRC     = 0;
+  _singleDrop  = singleDrop;
+  _sampleDelay = 750;
+  ds           = new OneWire(pin);
 }
 
 boolean DS18B20::search()
@@ -58,16 +59,20 @@ bool DS18B20::setResolution(uint8_t addr[8], uint8_t newResolution)
   switch (newResolution)
   {
     case 12:
+      _sampleDelay = 750;
       ds->write(TEMP_12_BIT);
       break;
     case 11:
+      _sampleDelay = 375;
       ds->write(TEMP_11_BIT);
       break;
     case 10:
+      _sampleDelay = 188;
       ds->write(TEMP_10_BIT);
       break;
     case 9:
     default:
+      _sampleDelay = 94;
       ds->write(TEMP_9_BIT);
       break;
   }
@@ -173,8 +178,8 @@ float DS18B20::getTemperature(uint8_t addr[8], bool forceSelect)
     ds->select(addr);
 
   ds->write(0x44);        // start conversion, with parasite power on at the end
-  delay(750);     // maybe 750ms is enough, maybe not
-                  // we might do a ds.depower() here, but the reset will take care of it.
+  delay(_sampleDelay);    // maybe 750ms is enough, maybe not
+                          // we might do a ds.depower() here, but the reset will take care of it.
   ds->reset();
   if (_singleDrop && !forceSelect)
     ds->skip();
